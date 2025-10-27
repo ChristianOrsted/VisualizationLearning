@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .map-container {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin: 20px;
+    }
+    
+    .controls-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        color: white;
+    }
+    
+    .year-selector {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .year-selector label {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    .year-selector select {
+        padding: 8px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background: white;
+        color: #333;
+        min-width: 120px;
+    }
+    
+    .stats-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+    }
+    
+    .stat-card.increase {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    }
+    
+    .stat-card.decrease {
+        background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+    }
+    
+    #changeRateMap {
+        width: 100%;
+        height: 650px;
+        margin: 20px 0;
+    }
+    
+    .legend-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .legend-panel h3 {
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .legend-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .legend-section h4 {
+        margin-bottom: 10px;
+        color: #666;
+        font-size: 16px;
+    }
+    
+    .city-rank-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        margin-bottom: 8px;
+        background: white;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .city-rank-item.increase {
+        border-left-color: #ff6b6b;
+    }
+    
+    .city-rank-item.decrease {
+        border-left-color: #51cf66;
+    }
+    
+    .change-value {
+        font-weight: bold;
+    }
+    
+    .change-value.positive {
+        color: #ff6b6b;
+    }
+    
+    .change-value.negative {
+        color: #51cf66;
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 18px;
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-container">
+    <div class="controls-panel">
+        <div class="year-selector">
+            <label>📅 Select Year:</label>
+            <select id="yearSelect">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div style="font-size: 14px; opacity: 0.9;">
+            🔴 Red = Price Increase | 🟢 Green = Price Decrease
+        </div>
+    </div>
+
+    <div class="stats-panel">
+        <div class="stat-card increase">
+            <div class="stat-label">Highest Increase</div>
+            <div class="stat-value" id="maxIncrease">-</div>
+        </div>
+        <div class="stat-card decrease">
+            <div class="stat-label">Largest Decrease</div>
+            <div class="stat-value" id="maxDecrease">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Average Change</div>
+            <div class="stat-value" id="avgChange">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Provinces</div>
+            <div class="stat-value" id="totalCities">-</div>
+        </div>
+    </div>
+
+    <div id="changeRateMap" style="position: relative;">
+        <div class="loading-overlay">🔄 Loading...</div>
+    </div>
+
+    <div class="legend-panel">
+        <h3>📊 Year-over-Year Change Rankings</h3>
+        <div class="legend-grid">
+            <div class="legend-section">
+                <h4>🔴 TOP 5 Increases</h4>
+                <div id="topIncreasesList">
+                    <div style="text-align: center; color: #999; padding: 20px;">
+                        Please select a year to view data
+                    </div>
+                </div>
+            </div>
+            <div class="legend-section">
+                <h4>🟢 TOP 5 Decreases</h4>
+                <div id="topDecreasesList">
+                    <div style="text-align: center; color: #999; padding: 20px;">
+                        Please select a year to view data
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+    // 城市名映射表（英文城市到中文省名和英文省名）
+    const cityToProvince = {
+        "beijing": { province: "北京市", provinceEN: "Beijing", cityNameEN: "Beijing" },
+        "shanghai": { province: "上海市", provinceEN: "Shanghai", cityNameEN: "Shanghai" },
+        "tianjin": { province: "天津市", provinceEN: "Tianjin", cityNameEN: "Tianjin" },
+        "chongqing": { province: "重庆市", provinceEN: "Chongqing", cityNameEN: "Chongqing" },
+        "shijiazhuang": { province: "河北省", provinceEN: "Hebei", cityNameEN: "Shijiazhuang" },
+        "taiyuan": { province: "山西省", provinceEN: "Shanxi", cityNameEN: "Taiyuan" },
+        "hohhot": { province: "内蒙古自治区", provinceEN: "Inner Mongolia", cityNameEN: "Hohhot" },
+        "shenyang": { province: "辽宁省", provinceEN: "Liaoning", cityNameEN: "Shenyang" },
+        "changchun": { province: "吉林省", provinceEN: "Jilin", cityNameEN: "Changchun" },
+        "harbin": { province: "黑龙江省", provinceEN: "Heilongjiang", cityNameEN: "Harbin" },
+        "nanjing": { province: "江苏省", provinceEN: "Jiangsu", cityNameEN: "Nanjing" },
+        "hangzhou": { province: "浙江省", provinceEN: "Zhejiang", cityNameEN: "Hangzhou" },
+        "hefei": { province: "安徽省", provinceEN: "Anhui", cityNameEN: "Hefei" },
+        "fuzhou": { province: "福建省", provinceEN: "Fujian", cityNameEN: "Fuzhou" },
+        "nanchang": { province: "江西省", provinceEN: "Jiangxi", cityNameEN: "Nanchang" },
+        "jinan": { province: "山东省", provinceEN: "Shandong", cityNameEN: "Jinan" },
+        "zhengzhou": { province: "河南省", provinceEN: "Henan", cityNameEN: "Zhengzhou" },
+        "wuhan": { province: "湖北省", provinceEN: "Hubei", cityNameEN: "Wuhan" },
+        "changsha": { province: "湖南省", provinceEN: "Hunan", cityNameEN: "Changsha" },
+        "guangzhou": { province: "广东省", provinceEN: "Guangdong", cityNameEN: "Guangzhou" },
+        "nanning": { province: "广西壮族自治区", provinceEN: "Guangxi", cityNameEN: "Nanning" },
+        "haikou": { province: "海南省", provinceEN: "Hainan", cityNameEN: "Haikou" },
+        "chengdu": { province: "四川省", provinceEN: "Sichuan", cityNameEN: "Chengdu" },
+        "guiyang": { province: "贵州省", provinceEN: "Guizhou", cityNameEN: "Guiyang" },
+        "kunming": { province: "云南省", provinceEN: "Yunnan", cityNameEN: "Kunming" },
+        "lhasa": { province: "西藏自治区", provinceEN: "Tibet", cityNameEN: "Lhasa" },
+        "xi'an": { province: "陕西省", provinceEN: "Shaanxi", cityNameEN: "Xi'an" },
+        "lanzhou": { province: "甘肃省", provinceEN: "Gansu", cityNameEN: "Lanzhou" },
+        "xining": { province: "青海省", provinceEN: "Qinghai", cityNameEN: "Xining" },
+        "yinchuan": { province: "宁夏回族自治区", provinceEN: "Ningxia", cityNameEN: "Yinchuan" },
+        "urumchi": { province: "新疆维吾尔自治区", provinceEN: "Xinjiang", cityNameEN: "Urumqi" },
+        "taiwan": { province: "台湾省", provinceEN: "Taiwan", cityNameEN: "Taiwan" },
+        "macao": { province: "澳门特别行政区", provinceEN: "Macao", cityNameEN: "Macao"},
+        "hong kong": { province: "香港特别行政区", provinceEN: "Hong Kong", cityNameEN: "Hong Kong"}
+    };
+
+    let myChart = null;
+    let allYears = [];
+    let currentYear = null;
+
+    // 初始化图表
+    function initChart() {
+        const chartDom = document.getElementById('changeRateMap');
+        myChart = echarts.init(chartDom);
+        
+        // 显示加载动画
+        myChart.showLoading({
+            text: 'Loading map data...',
+            color: '#667eea'
+        });
+    }
+
+    // 加载年份列表
+    async function loadYears() {
+        try {
+            const response = await fetch('/api/change_rate_map_data');
+            const result = await response.json();
+            
+            if (result.success) {
+                allYears = result.years;
+                currentYear = result.year;
+                
+                // 填充年份下拉框
+                const yearSelect = document.getElementById('yearSelect');
+                yearSelect.innerHTML = '';
+                allYears.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    if (year === currentYear) {
+                        option.selected = true;
+                    }
+                    yearSelect.appendChild(option);
+                });
+                
+                // 加载当前年份数据
+                await loadMapData(currentYear);
+            }
+        } catch (error) {
+            console.error('Failed to load data:', error);
+            alert('Failed to load data. Please refresh the page.');
+        }
+    }
+
+    // 加载地图数据
+    async function loadMapData(year) {
+        try {
+            const response = await fetch(`/api/change_rate_map_data?year=${year}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                // 将英文城市数据转换为省份数据
+                const provinceData = [];
+                const cityDisplayData = [];
+                
+                result.data.forEach(item => {
+                    const cityNameEN = item.name.toLowerCase();
+                    const mapping = cityToProvince[cityNameEN];
+                    
+                    if (mapping) {
+                        // 用于地图显示（必须使用中文省名）
+                        provinceData.push({
+                            name: mapping.province,  // ECharts需要中文省名
+                            value: item.value,       // 涨跌幅
+                            cityNameEN: mapping.cityNameEN,
+                            provinceEN: mapping.provinceEN,
+                            price: item.price || 0
+                        });
+                        
+                        // 用于统计和排名显示
+                        cityDisplayData.push({
+                            name: mapping.cityNameEN,
+                            value: item.value,
+                            price: item.price || 0
+                        });
+                    } else {
+                        console.warn('Mapping not found for:', cityNameEN);
+                    }
+                });
+                
+                // 更新统计数据
+                updateStats(cityDisplayData);
+                
+                // 更新排名列表
+                updateRankings(cityDisplayData);
+                
+                // 渲染地图
+                renderMap(provinceData, year);
+            } else {
+                alert('Failed to load map data: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Failed to load map data:', error);
+            alert('Failed to load map data. Please check your internet connection.');
+        }
+    }
+
+    // 更新统计数据
+    function updateStats(data) {
+        if (data.length === 0) return;
+        
+        const changeRates = data.map(item => item.value);
+        const maxIncrease = Math.max(...changeRates);
+        const maxDecrease = Math.min(...changeRates);
+        const avgChange = changeRates.reduce((a, b) => a + b, 0) / changeRates.length;
+        
+        document.getElementById('maxIncrease').textContent = '+' + maxIncrease.toFixed(2) + '%';
+        document.getElementById('maxDecrease').textContent = maxDecrease.toFixed(2) + '%';
+        document.getElementById('avgChange').textContent = (avgChange >= 0 ? '+' : '') + avgChange.toFixed(2) + '%';
+        document.getElementById('totalCities').textContent = data.length;
+    }
+
+    // 更新排名列表
+    function updateRankings(data) {
+        // 涨幅最大的5个城市
+        const topIncreases = [...data]
+            .filter(item => item.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+        
+        const increasesHtml = topIncreases.length > 0 ? topIncreases.map((item, index) => `
+            <div class="city-rank-item increase">
+                <span>${index + 1}. ${item.name}</span>
+                <span class="change-value positive">+${item.value.toFixed(2)}%</span>
+            </div>
+        `).join('') : '<div style="text-align: center; color: #999; padding: 10px;">No increases</div>';
+        
+        document.getElementById('topIncreasesList').innerHTML = increasesHtml;
+        
+        // 跌幅最大的5个城市
+        const topDecreases = [...data]
+            .filter(item => item.value < 0)
+            .sort((a, b) => a.value - b.value)
+            .slice(0, 5);
+        
+        const decreasesHtml = topDecreases.length > 0 ? topDecreases.map((item, index) => `
+            <div class="city-rank-item decrease">
+                <span>${index + 1}. ${item.name}</span>
+                <span class="change-value negative">${item.value.toFixed(2)}%</span>
+            </div>
+        `).join('') : '<div style="text-align: center; color: #999; padding: 10px;">No decreases</div>';
+        
+        document.getElementById('topDecreasesList').innerHTML = decreasesHtml;
+    }
+
+    // 渲染地图
+    function renderMap(data, year) {
+        myChart.hideLoading();
+        
+        const option = {
+            title: {
+                text: `China Housing Price YoY Change Rate Map (${year})`,
+                left: 'center',
+                top: 20,
+                textStyle: {
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    color: '#333'
+                }
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: function(params) {
+                    if (params.data && typeof params.data.value !== 'undefined') {
+                        const cityName = params.data.cityNameEN;
+                        const provinceName = params.data.provinceEN;
+                        const changeRate = params.data.value;
+                        const price = params.data.price;
+                        const changeColor = changeRate >= 0 ? '#ff6b6b' : '#51cf66';
+                        const changeSign = changeRate > 0 ? '+' : '';
+                        
+                        return `
+                            <div style="padding: 10px;">
+                                <strong style="font-size: 16px;">${cityName}, ${provinceName}</strong><br/>
+                                <span style="color: ${changeColor};">📈 YoY Change:</span> <strong style="color: ${changeColor};">${changeSign}${changeRate.toFixed(2)}%</strong><br/>
+                                <span style="color: #667eea;">💰 Current Price:</span> ¥${price.toLocaleString()}/m²
+                            </div>
+                        `;
+                    } else {
+                        return `<div style="padding: 10px;">${params.name}<br/>No data available</div>`;
+                    }
+                },
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderColor: '#667eea',
+                borderWidth: 2,
+                textStyle: {
+                    color: '#333'
+                }
+            },
+            visualMap: {
+                show: true,
+                left: 'left',
+                bottom: 'bottom',
+                type: 'piecewise',
+                pieces: [
+                    {min: 10, label: '≥ +10%', color: '#8B0000'},
+                    {min: 5, max: 9.99, label: '+5% ~ +10%', color: '#DC143C'},
+                    {min: 2, max: 4.99, label: '+2% ~ +5%', color: '#FF6B6B'},
+                    {min: 0, max: 1.99, label: '0% ~ +2%', color: '#FFA07A'},
+                    {min: -2, max: -0.01, label: '-2% ~ 0%', color: '#98FB98'},
+                    {min: -5, max: -2.01, label: '-5% ~ -2%', color: '#51CF66'},
+                    {min: -10, max: -5.01, label: '-10% ~ -5%', color: '#2E8B57'},
+                    {max: -10.01, label: '≤ -10%', color: '#006400'}
+                ],
+                textStyle: {
+                    color: '#333',
+                    fontSize: 12
+                }
+            },
+            series: [
+                {
+                    name: 'Change Rate',
+                    type: 'map',
+                    map: 'china',
+                    roam: true,
+                    emphasis: {
+                        label: {
+                            show: false
+                        },
+                        itemStyle: {
+                            areaColor: '#667eea',
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }
+                    },
+                    itemStyle: {
+                        areaColor: '#eee',
+                        borderColor: '#999',
+                        borderWidth: 0.5
+                    },
+                    label: {
+                        show: false
+                    },
+                    data: data
+                }
+            ]
+        };
+        
+        myChart.setOption(option, true);
+    }
+
+    // 年份选择事件
+    document.getElementById('yearSelect').addEventListener('change', function(e) {
+        const selectedYear = parseInt(e.target.value);
+        if (selectedYear) {
+            loadMapData(selectedYear);
+        }
+    });
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', async function() {
+        initChart();
+        
+        // 注册中国地图
+        try {
+            const response = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+            const chinaJson = await response.json();
+            echarts.registerMap('china', chinaJson);
+            
+            // 加载年份和数据
+            await loadYears();
+        } catch (error) {
+            console.error('Failed to load map:', error);
+            myChart.hideLoading();
+            alert('Failed to load map. Please check your internet connection.');
+        }
+    });
+
+    // 响应式调整
+    window.addEventListener('resize', function() {
+        if (myChart) {
+            myChart.resize();
+        }
+    });
+</script>
+{% endblock %}
+```
