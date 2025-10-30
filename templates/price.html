@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    .main-content {
+        display: flex;
+        min-height: 800px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    .sidebar {
+        width: 300px;
+        background: white;
+        padding: 30px;
+        border-right: 1px solid #eaeaea;
+        overflow-y: auto;
+        max-height: calc(100vh - 100px);
+    }
+
+    .sidebar h3 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .city-list {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+    }
+
+    .city-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .city-list::-webkit-scrollbar-track {
+        background: #f5f5f5;
+        border-radius: 10px;
+    }
+
+    .city-list::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+    }
+
+    .city-list::-webkit-scrollbar-thumb:hover {
+        background: #ccc;
+    }
+
+    .city-item {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .city-item:hover {
+        border-color: #667eea;
+        transform: translateX(5px);
+    }
+
+    .city-item.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+        font-weight: 600;
+    }
+
+    .city-item .checkmark {
+        display: none;
+        font-size: 18px;
+    }
+
+    .city-item.selected .checkmark {
+        display: block;
+    }
+
+    .info-box {
+        background: #e7f3ff;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 4px solid #667eea;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #495057;
+    }
+
+    .selected-count {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: #667eea;
+        border: 2px solid #e9ecef;
+    }
+
+    .content-area {
+        flex: 1;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-title {
+        font-size: 1.8em;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    #priceChart {
+        width: 100%;
+        flex: 1;
+        min-height: 400px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .empty-state .icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+        color: #666;
+    }
+
+    .data-section {
+        display: flex;
+        gap: 20px;
+        flex: 1;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .table-title {
+        font-size: 1.3em;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 600;
+    }
+
+    .data-table-container {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 400px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .data-table th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-weight: 600;
+        border: none;
+    }
+
+    .data-table th:first-child {
+        border-top-left-radius: 8px;
+    }
+
+    .data-table th:last-child {
+        border-top-right-radius: 8px;
+    }
+
+    .data-table td {
+        padding: 12px 15px;
+        text-align: center;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f8f9ff;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    @media (max-width: 1024px) {
+        .data-section {
+            flex-direction: column;
+        }
+        
+        .table-container {
+            max-height: 400px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        body {
+            padding: 10px;
+        }
+        
+        .main-content {
+            flex-direction: column;
+        }
+        
+        .sidebar {
+            width: 100%;
+            max-height: 300px;
+            border-right: none;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .content-area {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- 左侧城市选择 -->
+    <div class="sidebar">
+        <h3>City Selection</h3>
+        
+        <div class="city-list">
+            {% for city in cities %}
+            <div class="city-item" data-city="{{ city }}">
+                <span>{{ city }}</span>
+                <span class="checkmark">✓</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="info-box">
+            📌 Instructions: Click city names to add them to comparison. Click again to remove. Maximum 5 cities can be selected.
+        </div>
+
+        <div class="selected-count">
+            Selected <span id="selectedCount">0</span> / 5 cities
+        </div>
+    </div>
+
+    <!-- 右侧内容区域 -->
+    <div class="content-area">
+        <!-- 图表区域 -->
+        <div class="chart-container">
+            <h2 class="chart-title">Price Trend Comparison (Monthly)</h2>
+            <div id="priceChart"></div>
+            <div class="empty-state" id="emptyState">
+                <div class="icon">📊</div>
+                <h3>Start Your Analysis</h3>
+                <p>Select cities from the left panel to begin comparison</p>
+            </div>
+        </div>
+
+        <!-- 数据表格区域 -->
+        <div class="data-section">
+            <div class="table-container">
+                <h3 class="table-title">📋 Detailed Data</h3>
+                <div class="data-table-container">
+                    <table class="data-table" id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="100%" style="text-align: center; padding: 40px; color: #999;">
+                                    No data available
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+    let selectedCities = [];
+    const MAX_CITIES = 5;
+    let priceChart = null;
+
+    // 初始化图表
+    function initChart() {
+        const chartDom = document.getElementById('priceChart');
+        priceChart = echarts.init(chartDom);
+        
+        // 初始显示空状态
+        document.getElementById('emptyState').style.display = 'flex';
+        document.getElementById('priceChart').style.display = 'none';
+    }
+
+    // 城市选择处理
+    function initCitySelection() {
+        document.querySelectorAll('.city-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const city = this.getAttribute('data-city');
+                
+                if (this.classList.contains('selected')) {
+                    // 取消选择
+                    this.classList.remove('selected');
+                    selectedCities = selectedCities.filter(c => c !== city);
+                } else {
+                    // 选择城市
+                    if (selectedCities.length >= MAX_CITIES) {
+                        alert(`Maximum ${MAX_CITIES} cities can be selected!`);
+                        return;
+                    }
+                    this.classList.add('selected');
+                    selectedCities.push(city);
+                }
+                
+                updateSelectedCount();
+                updateChart();
+            });
+        });
+    }
+
+    // 更新选择计数
+    function updateSelectedCount() {
+        document.getElementById('selectedCount').textContent = selectedCities.length;
+    }
+
+    // 更新图表
+    function updateChart() {
+        if (selectedCities.length === 0) {
+            document.getElementById('priceChart').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'flex';
+            updateTable([]);
+            return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('priceChart').style.display = 'block';
+
+        // 获取数据
+        fetch('/api/price_data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cities: selectedCities
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderChart(data);
+                updateTable(data.tableData);
+            } else {
+                console.error('Failed to get data:', data.error);
+                alert('Failed to get data: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Request failed:', error);
+            alert('Request failed, please check network connection');
+        });
+    }
+
+    // 渲染图表
+    function renderChart(data) {
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function(params) {
+                    let result = `<strong>${params[0].axisValue}</strong><br/>`;
+                    params.forEach(item => {
+                        result += `${item.marker} ${item.seriesName}: <strong>¥${item.value.toLocaleString()}</strong><br/>`;
+                    });
+                    return result;
+                }
+            },
+            legend: {
+                data: data.cities,
+                top: 10,
+                type: 'scroll',
+                textStyle: {
+                    fontSize: 12
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: 60,
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: data.dates,
+                axisLabel: {
+                    rotate: 45,
+                    fontSize: 10,
+                    formatter: function(value, index) {
+                        // 精简显示：只显示年份
+                        if (value && value.includes('-')) {
+                            const parts = value.split('-');
+                            if (parts.length >= 2) {
+                                // 只显示年份
+                                return parts[0];
+                            }
+                        }
+                        return value;
+                    },
+                    interval: function(index) {
+                        // 一年显示一次：找到每年第一个数据点的索引
+                        if (index === 0) return true; // 总是显示第一个点
+                        
+                        const currentDate = data.dates[index];
+                        const prevDate = data.dates[index-1];
+                        
+                        if (currentDate && prevDate) {
+                            const currentYear = currentDate.split('-')[0];
+                            const prevYear = prevDate.split('-')[0];
+                            
+                            // 如果年份变化，显示这个点
+                            return currentYear !== prevYear;
+                        }
+                        
+                        return false;
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Price (¥/m²)',
+                axisLabel: {
+                    formatter: function(value) {
+                        return (value / 1000).toFixed(0) + 'k';
+                    }
+                }
+            },
+            series: data.series.map(s => ({
+                ...s,
+                type: 'line',
+                smooth: false,
+                symbol: 'circle',
+                symbolSize: 4,
+                lineStyle: {
+                    width: 1.5
+                },
+                areaStyle: {
+                    opacity: 0.1
+                }
+            })),
+            color: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b']
+        };
+
+        priceChart.setOption(option, true);
+        priceChart.resize();
+    }
+
+    // 更新表格
+    function updateTable(tableData) {
+        const table = document.getElementById('dataTable');
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+
+        if (!tableData || tableData.length === 0) {
+            thead.innerHTML = '<th>Month</th>';
+            tbody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 40px; color: #999;">No data available</td></tr>';
+            return;
+        }
+
+        // 更新表头
+        thead.innerHTML = '<th>Month</th>';
+        selectedCities.forEach(city => {
+            thead.innerHTML += `<th>${city}</th>`;
+        });
+
+        // 更新表体
+        tbody.innerHTML = '';
+        tableData.forEach(row => {
+            let tr = `<tr><td><strong>${row.date}</strong></td>`;
+            selectedCities.forEach(city => {
+                const value = row[city] || 0;
+                tr += `<td>¥${value.toLocaleString()}</td>`;
+            });
+            tr += '</tr>';
+            tbody.innerHTML += tr;
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        initChart();
+        initCitySelection();
+        
+        // 窗口大小改变时重新调整图表
+        window.addEventListener('resize', function() {
+            if (priceChart) {
+                priceChart.resize();
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,6 @@
+.venv
+backup/
+test.ipynb
+.wasted
+data/long_format_yearly_price.xlsx
+data/yearly_price.xlsx
