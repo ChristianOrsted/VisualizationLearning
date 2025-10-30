@@ -3,11 +3,31 @@
 {% block extra_css %}
 <style>
     .map-container {
+        background: none;
+        border-radius: 0;
+        box-shadow: none;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .controls-panel, .stats-panel, .legend-panel {
         background: white;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin: 20px;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 24px 24px;
+        margin: 20px 0;
+    }
+    #changeRateMap {
+        width: 100% !important;
+        height: 580px !important;
+        min-height: 0;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        margin: 24px 0;
+        padding: 8px;
     }
     
     .controls-panel {
@@ -15,9 +35,9 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
-        padding: 20px;
+        padding: 0 20px 0 20px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
+        border-radius: 0;
         color: white;
     }
     
@@ -44,49 +64,50 @@
     }
     
     .stats-panel {
+        background: none;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
         margin-bottom: 20px;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
     }
-    
     .stat-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 10px;
-        color: white;
+        border-radius: 18px;
+        box-shadow: 0 6px 20px rgba(102,126,234,0.08);
+        color: #fff;
+        padding: 28px 18px;
         text-align: center;
+        margin: 0;
+        font-size: 1.4em;
+        position: relative;
+        min-width: 0;
+        transition: box-shadow 0.2s;
     }
-    
     .stat-card.increase {
-        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        background: linear-gradient(135deg, #ff5858 0%, #f09819 100%);
     }
-    
     .stat-card.decrease {
-        background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+        background: linear-gradient(135deg, #36d1c4 0%, #4699f9 100%);
     }
-    
     .stat-label {
-        font-size: 14px;
-        opacity: 0.9;
+        font-size: 1em;
+        font-weight: 400;
+        opacity: 0.88;
         margin-bottom: 8px;
     }
-    
     .stat-value {
-        font-size: 24px;
         font-weight: bold;
-    }
-    
-    #changeRateMap {
-        width: 100%;
-        height: 650px;
-        margin: 20px 0;
+        font-size: 2em;
+        margin-bottom: 0;
     }
     
     .legend-panel {
         background: #f8f9fa;
-        border-radius: 10px;
-        padding: 20px;
+        border-radius: 0;
+        padding: 0 20px 0 20px;
         margin-top: 20px;
     }
     
@@ -530,4 +551,3 @@
     });
 </script>
 {% endblock %}
-```

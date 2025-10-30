@@ -4,18 +4,21 @@
 <style>
     .main-content {
         display: flex;
-        min-height: 600px;
+        gap: 32px;
+        padding: 16px 0;
+        width: 100%;
+        min-height: 620px;
+        background: none;
     }
-
     .sidebar {
         width: 280px;
-        background: #f8f9fa;
-        padding: 20px;
-        border-right: 1px solid #dee2e6;
-        overflow-y: auto;
-        max-height: calc(100vh - 250px);
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.10);
+        padding: 24px 20px;
+        margin-right: 16px;
+        border: none;
     }
-
     .sidebar h3 {
         margin-bottom: 15px;
         color: #333;
@@ -26,6 +29,9 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 4px;
     }
 
     .city-item {
@@ -80,28 +86,35 @@
     }
 
     .content-area {
-        flex: 1;
-        padding: 30px;
+        flex: 1 1 0%;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        min-width: 0;
+        background: none;
+        padding: 0;
     }
-
     .chart-container {
         background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 32px 24px;
+        min-height: 420px;
+        height: 540px;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 18px;
     }
-
     .chart-title {
         font-size: 1.5em;
         margin-bottom: 20px;
         color: #333;
         font-weight: 600;
     }
-
     #chart {
-        width: 100%;
-        height: 500px;
+        width: 100% !important;
+        height: 420px !important;
+        flex: 1 1 0%;
     }
 
     .empty-state {
@@ -122,10 +135,11 @@
 
     .table-container {
         background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow-x: auto;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 32px 24px;
+        flex: 1;
+        min-width: 0;
     }
 
     .table-title {
