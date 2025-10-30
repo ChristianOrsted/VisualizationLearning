@@ -14,36 +14,48 @@
     }
     
     .controls-panel {
+        background: linear-gradient(90deg, #e0eaff 0%, #d5ecf6 100%);
+        border-radius: 20px;
+        box-shadow: 0 4px 18px rgba(120,130,180,0.12);
+        padding: 20px 30px;
+        margin: 24px 0;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-        padding: 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 0;
-        color: white;
+        justify-content: flex-start;
+        gap: 20px;
     }
     
     .year-selector {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
+        background: rgba(255,255,255,0.40);
+        border-radius: 16px;
+        padding: 8px 18px 8px 14px;
+        box-shadow: 0 1px 8px rgba(150,160,220,0.08);
     }
     
     .year-selector label {
-        font-size: 18px;
+        font-size: 1.12em;
         font-weight: 600;
+        color: #3d4d6c;
+        letter-spacing: 1px;
+        margin-right: 4px;
     }
     
     .year-selector select {
-        padding: 8px 20px;
-        font-size: 16px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        background: white;
-        color: #333;
-        min-width: 120px;
+        padding: 6px 18px;
+        font-size: 1em;
+        border: 1px solid #b1badb;
+        border-radius: 10px;
+        background: #fff;
+        color: #304066;
+        transition: border .19s;
+        outline: none;
+    }
+    
+    .year-selector select:focus {
+        border-color: #667eea;
     }
     
     .stats-panel {
