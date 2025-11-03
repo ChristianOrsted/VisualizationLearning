@@ -196,7 +196,7 @@
             {% endfor %}
         </div>
         <div class="info-box">
-            📌📌 Instructions: Click city names to add them to comparison. Click again to remove. Maximum 5 cities can be selected.
+            📌 Instructions: Click city names to add them to comparison. Click again to remove. Maximum 5 cities can be selected.
         </div>
         <div class="selected-count">
             Selected <span id="selectedCount">0</span> / 5 cities
@@ -213,27 +213,13 @@
             </div>
             <div id="chart" style="display: none;"></div>
         </div>
-
-        <div class="table-container" id="tableContainer" style="display: none;">
-            <h3 class="table-title">📋Detailed Data</h3>
-            <table id="dataTable">
-                <thead>
-                    <tr>
-                        <th>Year</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="100%">No data available</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <!-- 表格容器已完全移除 -->
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <script>
     let selectedCities = [];
     let myChart = null;
@@ -276,11 +262,10 @@
         if (selectedCities.length === 0) {
             document.getElementById('emptyState').style.display = 'block';
             document.getElementById('chart').style.display = 'none';
-            document.getElementById('tableContainer').style.display = 'none';
-            return;
+            return; // 移除了表格相关的隐藏代码
         }
         
-        fetch('/api/change_rate_data', {
+        fetch('/api/monthly_change_rate_data', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -292,10 +277,9 @@
             if (data.success) {
                 document.getElementById('emptyState').style.display = 'none';
                 document.getElementById('chart').style.display = 'block';
-                document.getElementById('tableContainer').style.display = 'block';
                 
                 renderChart(data);
-                renderTable(data);
+                // 移除了 renderTable(data) 调用
             }
         })
         .catch(error => {
@@ -366,28 +350,7 @@
         myChart.setOption(option, true);
     }
 
-    function renderTable(data) {
-        const table = document.getElementById('dataTable');
-        const thead = table.querySelector('thead tr');
-        const tbody = table.querySelector('tbody');
-        
-        thead.innerHTML = '<th>Year</th>';
-        data.cities.forEach(city => {
-            thead.innerHTML += `<th>${city}</th>`;
-        });
-        
-        tbody.innerHTML = '';
-        data.tableData.forEach(row => {
-            let tr = `<tr><td><strong>${row.year}</strong></td>`;
-            data.cities.forEach(city => {
-                const value = row[city] || 0;
-                const displayValue = value + '%';
-                tr += `<td>${displayValue}</td>`;
-            });
-            tr += '</tr>';
-            tbody.innerHTML += tr;
-        });
-    }
+    // 移除了整个 renderTable 函数
 
     window.addEventListener('resize', function() {
         if (myChart) myChart.resize();

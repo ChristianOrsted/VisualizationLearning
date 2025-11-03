@@ -101,6 +101,60 @@ def get_multi_city_monthly_data(cities):
         print(f"获取城市月度数据错误: {e}")
         return []
 
+def get_multi_city_monthly_change_rate_data(cities):
+    """获取多个城市的月度涨跌幅数据 - 基于月度价格计算环比"""
+    if not cities:
+        return []
+    
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                placeholders = ','.join(['%s'] * len(cities))
+                query = f"""
+                    SELECT city_name, year, month, price 
+                    FROM monthly_price_for_all 
+                    WHERE city_name IN ({placeholders})
+                    ORDER BY city_name, year, month
+                """
+                cursor.execute(query, cities)
+                results = cursor.fetchall()
+                
+                # 计算环比涨跌幅
+                city_data = {}
+                for row in results:
+                    city = row['city_name']
+                    if city not in city_data:
+                        city_data[city] = []
+                    city_data[city].append(row)
+                
+                # 为每个城市计算环比涨跌幅
+                change_rate_results = []
+                for city, data in city_data.items():
+                    for i in range(len(data)):
+                        if i == 0:
+                            # 第一个月没有环比数据
+                            continue
+                        
+                        current_price = float(data[i]['price']) if data[i]['price'] else 0
+                        previous_price = float(data[i-1]['price']) if data[i-1]['price'] else 0
+                        
+                        if previous_price > 0:
+                            change_rate = ((current_price - previous_price) / previous_price) * 100
+                        else:
+                            change_rate = 0
+                        
+                        change_rate_results.append({
+                            'city_name': city,
+                            'year': data[i]['year'],
+                            'month': data[i]['month'],
+                            'change_rate': round(change_rate, 2)
+                        })
+                
+                return change_rate_results
+    except Exception as e:
+        print(f"获取城市月度涨跌幅数据错误: {e}")
+        return []
+
 # ============ 路由 ============
 
 @app.route('/')
@@ -114,11 +168,17 @@ def price_page():
     cities = get_all_cities_monthly()
     return render_template('price.html', cities=cities, current_page='price_compare')
 
-@app.route('/chart/change_rate_compare')
-def change_rate_page():
+@app.route('/chart/monthly_change_rate_compare')
+def monthly_change_rate_page():
+    """月度涨跌幅对比页面"""
+    cities = get_all_cities_monthly()
+    return render_template('monthly_change_rate.html', cities=cities, current_page='change_rate_compare')
+
+@app.route('/chart/yearly_change_rate_compare')
+def yearly_change_rate_page():
     """涨跌幅对比页面"""
     cities = get_all_cities()
-    return render_template('change_rate.html', cities=cities, current_page='change_rate_compare')
+    return render_template('yearly_change_rate.html', cities=cities, current_page='change_rate_compare')
 
 @app.route('/map/price_map')
 def price_map_page():
@@ -234,8 +294,100 @@ def get_price_data():
             'cities': []
         }), 500
 
-@app.route('/api/change_rate_data', methods=['POST'])
-def get_change_rate_data():
+@app.route('/api/monthly_change_rate_data', methods=['POST'])
+def get_monthly_change_rate_data():
+    """获取涨跌幅月度数据API - 修改为月度环比"""
+    try:
+        selected_cities = request.json.get('cities', [])
+        
+        if not selected_cities:
+            return jsonify({
+                'dates': [],
+                'series': [],
+                'tableData': [],
+                'cities': []
+            })
+        
+        selected_cities = selected_cities[:5]
+        data = get_multi_city_monthly_change_rate_data(selected_cities)
+        
+        if not data:
+            return jsonify({
+                'dates': [],
+                'series': [],
+                'tableData': [],
+                'cities': selected_cities,
+                'error': '未找到数据'
+            })
+        
+        # 组织数据
+        city_data = {}
+        dates = set()
+        
+        for row in data:
+            city = row['city_name']
+            year = row['year']
+            month = row['month']
+            change_rate = float(row['change_rate']) if row['change_rate'] is not None else 0
+            
+            # 创建日期字符串 "YYYY-MM"
+            date_str = f"{year}-{month:02d}"
+            dates.add(date_str)
+            
+            if city not in city_data:
+                city_data[city] = {}
+            city_data[city][date_str] = round(change_rate, 2)
+        
+        # 排序日期
+        dates = sorted(list(dates))
+        
+        # 构建图表数据
+        series_data = []
+        for city in selected_cities:
+            rates = [city_data.get(city, {}).get(date, 0) for date in dates]
+            series_data.append({
+                'name': city,
+                'type': 'line',
+                'data': rates,
+                'smooth': True,
+                'symbol': 'circle',
+                'symbolSize': 6,
+                'areaStyle': {
+                    'opacity': 0.3
+                }
+            })
+        
+        # 构建表格数据
+        table_data = []
+        for date in dates:
+            row = {'date': date}
+            for city in selected_cities:
+                row[city] = city_data.get(city, {}).get(date, 0)
+            table_data.append(row)
+        
+        return jsonify({
+            'dates': dates,
+            'series': series_data,
+            'tableData': table_data,
+            'cities': selected_cities,
+            'success': True
+        })
+    
+    except Exception as e:
+        print(f"API错误 (change_rate_data): {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'success': False,
+            'dates': [],
+            'series': [],
+            'tableData': [],
+            'cities': []
+        }), 500
+    
+@app.route('/api/yearly_change_rate_data', methods=['POST'])
+def get_yearly_change_rate_data():
     """获取涨跌幅数据API"""
     try:
         selected_cities = request.json.get('cities', [])

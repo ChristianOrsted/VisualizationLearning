@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .main-content {
+        display: flex;
+        gap: 32px;
+        padding: 16px 0;
+        width: 100%;
+        min-height: 620px;
+        background: none;
+    }
+    .sidebar {
+        width: 280px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.10);
+        padding: 24px 20px;
+        margin-right: 8px;
+        border: none;
+    }
+    .sidebar h3 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 1.1em;
+    }
+
+    .city-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .city-item {
+        padding: 10px 15px;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .city-item:hover {
+        border-color: #667eea;
+        transform: translateX(5px);
+    }
+
+    .city-item.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+    }
+
+    .city-item .checkmark {
+        display: none;
+    }
+
+    .city-item.selected .checkmark {
+        display: inline;
+    }
+
+    .info-box {
+        margin-top: 15px;
+        padding: 12px;
+        background: #e7f3ff;
+        border-left: 4px solid #667eea;
+        border-radius: 5px;
+        font-size: 0.9em;
+        color: #495057;
+    }
+
+    .selected-count {
+        margin-top: 15px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        color: #667eea;
+    }
+
+    .content-area {
+        flex: 1 1 0%;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        min-width: 0;
+        background: none;
+        padding: 0;
+    }
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 32px 24px;
+        min-height: 420px;
+        height: 540px;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 18px;
+    }
+    .chart-title {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+        color: #333;
+        font-weight: 600;
+    }
+    #chart {
+        width: 100% !important;
+        height: 420px !important;
+        flex: 1 1 0%;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+
+    .empty-state .icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+        font-size: 1.3em;
+        margin-bottom: 10px;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 32px 24px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .table-title {
+        font-size: 1.3em;
+        margin-bottom: 15px;
+        color: #333;
+        font-weight: 600;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    tr:hover {
+        background: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .main-content {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            max-height: 300px;
+        }
+        
+        .chart-container, .table-container {
+            width: 100%;
+            margin-left: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="sidebar">
+        <h3>City Selection</h3>
+        <div class="city-list">
+            {% for city in cities %}
+            <div class="city-item" data-city="{{ city }}">
+                <span>{{ city }}</span>
+                <span class="checkmark">✓</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="info-box">
+            📌📌 Instructions: Click city names to add them to comparison. Click again to remove. Maximum 5 cities can be selected.
+        </div>
+        <div class="selected-count">
+            Selected <span id="selectedCount">0</span> / 5 cities
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="chart-container">
+            <h2 class="chart-title">Growth Rate Comparison</h2>
+            <div id="emptyState" class="empty-state">
+                <div class="icon">📊</div>
+                <h3>Start Your Analysis</h3>
+                <p>Select cities from the left panel to begin comparison</p>
+            </div>
+            <div id="chart" style="display: none;"></div>
+        </div>
+
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <h3 class="table-title">📋Detailed Data</h3>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="100%">No data available</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedCities = [];
+    let myChart = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initCitySelection();
+    });
+
+    function initCitySelection() {
+        const cityItems = document.querySelectorAll('.city-item');
+        
+        cityItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const city = this.dataset.city;
+                
+                if (selectedCities.includes(city)) {
+                    selectedCities = selectedCities.filter(c => c !== city);
+                    this.classList.remove('selected');
+                } else {
+                    if (selectedCities.length < 5) {
+                        selectedCities.push(city);
+                        this.classList.add('selected');
+                    } else {
+                        alert('最多只能选择5个城市进行对比！');
+                        return;
+                    }
+                }
+                
+                updateSelectedCount();
+                updateChart();
+            });
+        });
+    }
+
+    function updateSelectedCount() {
+        document.getElementById('selectedCount').textContent = selectedCities.length;
+    }
+
+    function updateChart() {
+        if (selectedCities.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('chart').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            return;
+        }
+        
+        fetch('/api/yearly_change_rate_data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cities: selectedCities })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('chart').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'block';
+                
+                renderChart(data);
+                renderTable(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('获取数据失败，请稍后重试！');
+        });
+    }
+
+    function renderChart(data) {
+        const chartDom = document.getElementById('chart');
+        
+        if (!myChart) {
+            myChart = echarts.init(chartDom);
+        }
+
+        const series = data.series.map(s => ({
+            ...s,
+            type: 'line',
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 8,
+            areaStyle: {
+                opacity: 0.3
+            }
+        }));
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function(params) {
+                    let result = params[0].axisValue + '<br/>';
+                    params.forEach(param => {
+                        const value = param.value + '%';
+                        result += param.marker + param.seriesName + ': ' + value + '<br/>';
+                    });
+                    return result;
+                }
+            },
+            legend: {
+                data: data.cities,
+                top: 10,
+                type: 'scroll'
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: data.years
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Change Rate (%)',
+                axisLabel: {
+                    formatter: '{value}%'
+                }
+            },
+            series: series
+        };
+
+        myChart.setOption(option, true);
+    }
+
+    function renderTable(data) {
+        const table = document.getElementById('dataTable');
+        const thead = table.querySelector('thead tr');
+        const tbody = table.querySelector('tbody');
+        
+        thead.innerHTML = '<th>Year</th>';
+        data.cities.forEach(city => {
+            thead.innerHTML += `<th>${city}</th>`;
+        });
+        
+        tbody.innerHTML = '';
+        data.tableData.forEach(row => {
+            let tr = `<tr><td><strong>${row.year}</strong></td>`;
+            data.cities.forEach(city => {
+                const value = row[city] || 0;
+                const displayValue = value + '%';
+                tr += `<td>${displayValue}</td>`;
+            });
+            tr += '</tr>';
+            tbody.innerHTML += tr;
+        });
+    }
+
+    window.addEventListener('resize', function() {
+        if (myChart) myChart.resize();
+    });
+</script>
+{% endblock %}
