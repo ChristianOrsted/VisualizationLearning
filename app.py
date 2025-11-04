@@ -503,35 +503,57 @@ def get_ranking_race_api():
     try:
         raw_data = get_ranking_race_data()
         
+        if not raw_data:
+            return jsonify({
+                'success': False,
+                'message': '未找到数据'
+            })
+        
         # 按时间段分组数据
         time_data = {}
+        time_points = set()
+        
         for row in raw_data:
             time_key = f"{row['year']}-{str(row['month']).zfill(2)}"
+            time_points.add(time_key)
+            
             if time_key not in time_data:
                 time_data[time_key] = []
             
-            price = float(row['price']) if row['price'] else 0
-            time_data[time_key].append({
-                'city': row['city_name'],
-                'price': price,
-                'year': row['year'],
-                'month': row['month']
-            })
+            price = float(row['price']) if row['price'] and row['price'] != '' else 0
+            
+            # 确保价格有效
+            if price > 0:
+                time_data[time_key].append({
+                    'city': row['city_name'],
+                    'city_en': row['city_name'],  # 如果没有英文名，使用中文名
+                    'price': price
+                })
         
         # 对每个时间段的数据按价格排序
         for time_key in time_data:
             time_data[time_key].sort(key=lambda x: x['price'], reverse=True)
         
         # 获取所有时间点（排序）
-        time_points = sorted(time_data.keys())
+        time_points = sorted(list(time_points))
+        
+        # 检查数据是否为空
+        if not time_points:
+            return jsonify({
+                'success': False,
+                'message': '没有有效的数据'
+            })
         
         return jsonify({
             'success': True,
             'timePoints': time_points,
             'data': time_data
         })
+        
     except Exception as e:
         print(f"获取排名竞速数据API错误: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': str(e)

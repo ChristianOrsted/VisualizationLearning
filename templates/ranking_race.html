@@ -181,6 +181,7 @@ const colorPalette = [
 ];
 
 // 初始化图表
+// 初始化图表
 function initChart() {
     const chartDom = document.getElementById('rankingChart');
     myChart = echarts.init(chartDom);
@@ -189,7 +190,7 @@ function initChart() {
         grid: {
             top: 50,
             bottom: 80,
-            left: 150,
+            left: 150,  // 增加左边距以容纳城市名称
             right: 100
         },
         xAxis: {
@@ -204,13 +205,15 @@ function initChart() {
             type: 'category',
             inverse: true,
             max: parseInt(document.getElementById('topNInput').value) - 1,
+            // 移除原来的axisLabel配置，使用默认配置显示城市名称
             axisLabel: {
-                show: true,
-                fontSize: 14,
-                fontWeight: 'bold'
+                fontSize: 12,
+                fontWeight: 'bold',
+                color: '#333'
             },
             animationDuration: 300,
-            animationDurationUpdate: 300
+            animationDurationUpdate: 300,
+            data: []  // 初始为空数组，后续动态更新
         },
         series: [{
             realtimeSort: true,
@@ -300,15 +303,19 @@ function updateChart(index) {
     const topN = parseInt(document.getElementById('topNInput').value);
     const topData = data.slice(0, topN);
     
-    // 准备图表数据
+    // 准备图表数据 - 关键修改：确保数据包含城市名称
     const chartData = topData.map(item => ({
         name: item.city,
         value: item.price
     }));
     
-    // 更新图表配置
+    // 获取城市名称列表用于y轴显示
+    const cityNames = topData.map(item => item.city);
+    
+    // 更新图表配置 - 关键修改：设置y轴的data
     const option = {
         yAxis: {
+            data: cityNames,  // 添加这行，设置y轴显示城市名称
             max: topN - 1
         },
         series: [{
@@ -368,13 +375,13 @@ function pauseAnimation() {
     }
     document.getElementById('startBtn').disabled = false;
     document.getElementById('pauseBtn').disabled = true;
-    document.getElementById('statusText').textContent = '已暂停';
+    document.getElementById('statusText').textContent = 'Suspended';
 }
 
 // 停止动画
 function stopAnimation() {
     pauseAnimation();
-    document.getElementById('statusText').textContent = '播放完成';
+    document.getElementById('statusText').textContent = 'Complished';
 }
 
 // 重置
@@ -382,7 +389,7 @@ function resetAnimation() {
     pauseAnimation();
     currentIndex = 0;
     updateChart(0);
-    document.getElementById('statusText').textContent = '已重置';
+    document.getElementById('statusText').textContent = 'Has refrashed';
 }
 
 // 事件监听
