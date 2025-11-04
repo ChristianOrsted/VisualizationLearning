@@ -154,6 +154,23 @@ def get_multi_city_monthly_change_rate_data(cities):
     except Exception as e:
         print(f"获取城市月度涨跌幅数据错误: {e}")
         return []
+    
+def get_ranking_race_data():
+    """获取所有城市的月度房价数据用于动态排名"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT city_name, year, month, price 
+                    FROM monthly_price_for_all 
+                    ORDER BY year, month, city_name
+                """
+                cursor.execute(query)
+                results = cursor.fetchall()
+                return results
+    except Exception as e:
+        print(f"获取排名竞速数据错误: {e}")
+        return []
 
 # ============ 路由 ============
 
@@ -179,6 +196,12 @@ def yearly_change_rate_page():
     """涨跌幅对比页面"""
     cities = get_all_cities()
     return render_template('yearly_change_rate.html', cities=cities, current_page='change_rate_compare')
+
+@app.route('/chart/ranking_race')
+def ranking_race_page():
+    """城市房价排名竞速页面"""
+    cities = get_all_cities_monthly()
+    return render_template('ranking_race.html', cities=cities, current_page='ranking_race')
 
 @app.route('/map/price_map')
 def price_map_page():
@@ -473,6 +496,46 @@ def get_yearly_change_rate_data():
             'tableData': [],
             'cities': []
         }), 500
+
+@app.route('/api/ranking_race_data')
+def get_ranking_race_api():
+    """获取排名竞速数据API"""
+    try:
+        raw_data = get_ranking_race_data()
+        
+        # 按时间段分组数据
+        time_data = {}
+        for row in raw_data:
+            time_key = f"{row['year']}-{str(row['month']).zfill(2)}"
+            if time_key not in time_data:
+                time_data[time_key] = []
+            
+            price = float(row['price']) if row['price'] else 0
+            time_data[time_key].append({
+                'city': row['city_name'],
+                'price': price,
+                'year': row['year'],
+                'month': row['month']
+            })
+        
+        # 对每个时间段的数据按价格排序
+        for time_key in time_data:
+            time_data[time_key].sort(key=lambda x: x['price'], reverse=True)
+        
+        # 获取所有时间点（排序）
+        time_points = sorted(time_data.keys())
+        
+        return jsonify({
+            'success': True,
+            'timePoints': time_points,
+            'data': time_data
+        })
+    except Exception as e:
+        print(f"获取排名竞速数据API错误: {e}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
 
 @app.route('/api/map_data', methods=['GET'])
 def get_map_data():

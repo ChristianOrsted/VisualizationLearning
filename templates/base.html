@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -76,6 +75,7 @@
             border-bottom-right-radius: 16px;
         }
         .nav-tab {
+            flex: 1; /* 平均分配空间 */
             padding: 15px 25px;
             cursor: pointer;
             border: none;
@@ -88,6 +88,7 @@
             white-space: nowrap;
             text-decoration: none;
             display: inline-block;
+            text-align: center; /* 文字居中 */
         }
         .nav-tab:hover {
             color: #667eea;
@@ -101,6 +102,10 @@
         @media (max-width: 768px) {
             .nav-tabs {
                 overflow-x: auto;
+            }
+            .nav-tab {
+                flex: 0 0 auto; /* 小屏幕时恢复自适应宽度 */
+                min-width: 150px; /* 设置最小宽度保证可读性 */
             }
         }
     </style>
@@ -123,14 +128,14 @@
             <a href="/chart/yearly_change_rate_compare" class="nav-tab {% if current_page == 'yearly_change_rate_compare' %}active{% endif %}">
                 📊 Yearly Growth Rate Analysis
             </a>
+            <a href="/chart/ranking_race" class="nav-tab {% if current_page == 'ranking_race' %}active{% endif %}">
+                🏁 Ranking Race
+            </a>
             <a href="/map/price_map" class="nav-tab {% if current_page == 'price_map' %}active{% endif %}">
                 🗺️ Price Map
             </a>
             <a href="/map/change_rate_map" class="nav-tab {% if current_page == 'change_rate_map' %}active{% endif %}">
                 📉 Change Rate Map
-            </a>
-            <a href="/map/ranking_race" class="nav-tab {% if current_page == 'ranking_race' %}active{% endif %}">
-                🏁 Ranking Race
             </a>
         </div>
 

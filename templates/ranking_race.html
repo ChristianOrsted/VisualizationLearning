@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .race-container {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .controls-panel {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .controls-panel h3 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 1.3em;
+    }
+
+    .control-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .control-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .control-item label {
+        font-weight: 500;
+        color: #495057;
+        white-space: nowrap;
+    }
+
+    .control-btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    input[type="number"] {
+        padding: 8px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1em;
+        width: 100px;
+        transition: border-color 0.3s;
+    }
+
+    input[type="number"]:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        padding: 32px 24px;
+        height: 700px;
+    }
+
+    #rankingChart {
+        width: 100%;
+        height: 100%;
+    }
+
+    .status-text {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 1.1em;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #667eea;
+        font-size: 1.2em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="race-container">
+    <div class="controls-panel">
+        <h3>🏁 Ranking Race for Housing Price</h3>
+        <div class="control-group">
+            <button id="startBtn" class="control-btn btn-primary">
+                ▶ Start
+            </button>
+            <button id="pauseBtn" class="control-btn btn-secondary" disabled>
+                ⏸ Stop
+            </button>
+            <button id="resetBtn" class="control-btn btn-warning">
+                Restart
+            </button>
+            
+            <div class="control-item">
+                <label>Speed (ms):</label>
+                <input type="number" id="speedInput" value="1000" min="100" max="5000" step="100">
+            </div>
+            
+            <div class="control-item">
+                <label>City number:</label>
+                <input type="number" id="topNInput" value="15" min="5" max="50" step="1">
+            </div>
+            
+            <div class="control-item status-text">
+                <span id="statusText">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <div id="loadingText" class="loading">Loading...</div>
+        <div id="rankingChart"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let myChart = null;
+let allData = {};
+let timePoints = [];
+let currentIndex = 0;
+let animationTimer = null;
+let isPlaying = false;
+
+// 城市颜色映射（可以自定义）
+const cityColors = {};
+const colorPalette = [
+    '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
+    '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#d14a61',
+    '#675bba', '#759aa0', '#e69d87', '#8dc1a9', '#dd6b66'
+];
+
+// 初始化图表
+function initChart() {
+    const chartDom = document.getElementById('rankingChart');
+    myChart = echarts.init(chartDom);
+    
+    const option = {
+        grid: {
+            top: 50,
+            bottom: 80,
+            left: 150,
+            right: 100
+        },
+        xAxis: {
+            max: 'dataMax',
+            axisLabel: {
+                formatter: function (n) {
+                    return n.toFixed(0) + ' ￥/㎡';
+                }
+            }
+        },
+        yAxis: {
+            type: 'category',
+            inverse: true,
+            max: parseInt(document.getElementById('topNInput').value) - 1,
+            axisLabel: {
+                show: true,
+                fontSize: 14,
+                fontWeight: 'bold'
+            },
+            animationDuration: 300,
+            animationDurationUpdate: 300
+        },
+        series: [{
+            realtimeSort: true,
+            type: 'bar',
+            data: [],
+            label: {
+                show: true,
+                position: 'right',
+                valueAnimation: true,
+                fontFamily: 'monospace',
+                fontSize: 14,
+                formatter: function(param) {
+                    return param.value.toFixed(0);
+                }
+            },
+            itemStyle: {
+                color: function(param) {
+                    const city = param.name;
+                    if (!cityColors[city]) {
+                        const colorIndex = Object.keys(cityColors).length % colorPalette.length;
+                        cityColors[city] = colorPalette[colorIndex];
+                    }
+                    return cityColors[city];
+                }
+            }
+        }],
+        animationDuration: 0,
+        animationDurationUpdate: parseInt(document.getElementById('speedInput').value),
+        animationEasing: 'linear',
+        animationEasingUpdate: 'linear',
+        graphic: {
+            elements: [{
+                type: 'text',
+                right: 100,
+                bottom: 20,
+                style: {
+                    text: '',
+                    font: 'bolder 60px monospace',
+                    fill: 'rgba(100, 100, 100, 0.25)'
+                },
+                z: 100
+            }]
+        }
+    };
+    
+    myChart.setOption(option);
+}
+
+// 加载数据
+async function loadData() {
+    try {
+        const response = await fetch('/api/ranking_race_data');
+        const result = await response.json();
+        
+        if (result.success) {
+            allData = result.data;
+            timePoints = result.timePoints;
+            document.getElementById('loadingText').style.display = 'none';
+            document.getElementById('rankingChart').style.display = 'block';
+            
+            initChart();
+            updateChart(0);
+            document.getElementById('statusText').textContent = `${timePoints.length} months been loaded`;
+        } else {
+            alert('数据加载失败: ' + result.message);
+        }
+    } catch (error) {
+        console.error('加载数据错误:', error);
+        alert('数据加载失败，请刷新页面重试');
+    }
+}
+
+// 更新图表
+function updateChart(index) {
+    if (index >= timePoints.length) {
+        stopAnimation();
+        return;
+    }
+    
+    currentIndex = index;
+    const timeKey = timePoints[index];
+    const data = allData[timeKey];
+    
+    if (!data || data.length === 0) return;
+    
+    // 获取当前要显示的城市数量
+    const topN = parseInt(document.getElementById('topNInput').value);
+    const topData = data.slice(0, topN);
+    
+    // 准备图表数据
+    const chartData = topData.map(item => ({
+        name: item.city,
+        value: item.price
+    }));
+    
+    // 更新图表配置
+    const option = {
+        yAxis: {
+            max: topN - 1
+        },
+        series: [{
+            data: chartData
+        }],
+        animationDurationUpdate: parseInt(document.getElementById('speedInput').value),
+        graphic: {
+            elements: [{
+                style: {
+                    text: timeKey
+                }
+            }]
+        }
+    };
+    
+    myChart.setOption(option);
+    
+    // 更新状态文本
+    document.getElementById('statusText').textContent = 
+        `${timeKey} (${index + 1}/${timePoints.length})`;
+}
+
+// 开始动画
+function startAnimation() {
+    if (isPlaying) return;
+    
+    isPlaying = true;
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('pauseBtn').disabled = false;
+    document.getElementById('statusText').textContent = '播放中...';
+    
+    const speed = parseInt(document.getElementById('speedInput').value);
+    
+    function animate() {
+        if (!isPlaying) return;
+        
+        if (currentIndex >= timePoints.length - 1) {
+            stopAnimation();
+            return;
+        }
+        
+        currentIndex++;
+        updateChart(currentIndex);
+        
+        animationTimer = setTimeout(animate, speed);
+    }
+    
+    animate();
+}
+
+// 暂停动画
+function pauseAnimation() {
+    isPlaying = false;
+    if (animationTimer) {
+        clearTimeout(animationTimer);
+        animationTimer = null;
+    }
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('statusText').textContent = '已暂停';
+}
+
+// 停止动画
+function stopAnimation() {
+    pauseAnimation();
+    document.getElementById('statusText').textContent = '播放完成';
+}
+
+// 重置
+function resetAnimation() {
+    pauseAnimation();
+    currentIndex = 0;
+    updateChart(0);
+    document.getElementById('statusText').textContent = '已重置';
+}
+
+// 事件监听
+document.getElementById('startBtn').addEventListener('click', startAnimation);
+document.getElementById('pauseBtn').addEventListener('click', pauseAnimation);
+document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+
+// 速度和显示数量变化时更新图表配置
+document.getElementById('speedInput').addEventListener('change', function() {
+    if (myChart) {
+        myChart.setOption({
+            animationDurationUpdate: parseInt(this.value)
+        });
+    }
+});
+
+document.getElementById('topNInput').addEventListener('change', function() {
+    updateChart(currentIndex);
+});
+
+// 窗口大小变化时重绘图表
+window.addEventListener('resize', function() {
+    if (myChart) {
+        myChart.resize();
+    }
+});
+
+// 页面加载时初始化
+window.addEventListener('load', function() {
+    loadData();
+});
+</script>
+{% endblock %}
